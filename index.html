@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f7f7f4">
+    <meta name="description" content="Routenplaner, Tankbuch, Service-Erinnerungen, Parkplatz und GPS-Cockpit für Mopedautos.">
+    <meta name="referrer" content="unsafe-url">
+    <title>Mopedroute — deine Mopedauto-App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="./styles.css?v=2">
+  </head>
+  <body>
+    <main class="app-shell">
+      <div id="map" class="map" aria-label="Interaktive Karte"></div>
+
+      <aside class="planner" id="planner" aria-label="Routenplanung">
+        <div class="grabber" aria-hidden="true"><span></span></div>
+        <header class="brand-row">
+          <a class="brand-mark" href="#" aria-label="Mopedroute Startseite">
+            <span class="brand-icon" aria-hidden="true">M</span>
+            <span><strong>MOPEDROUTE</strong><small>Routen, Tankbuch &amp; Cockpit</small></span>
+          </a>
+          <button class="icon-button panel-toggle" id="panel-toggle" type="button" aria-label="Planer einklappen" aria-expanded="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+        </header>
+
+        <nav class="app-tabs" aria-label="App-Bereiche">
+          <button type="button" class="app-tab active" data-screen-target="route" aria-current="page"><span>↗</span>Route</button>
+          <button type="button" class="app-tab" data-screen-target="fuel"><span>⛽</span>Tankbuch</button>
+          <button type="button" class="app-tab" data-screen-target="service"><span>🔧</span>Service</button>
+          <button type="button" class="app-tab" data-screen-target="parking"><span>📍</span>Parken</button>
+          <button type="button" class="app-tab" data-screen-target="cockpit"><span>◉</span>Cockpit</button>
+        </nav>
+
+        <div class="panel-content" id="panel-content">
+          <section class="screen active" id="screen-route" data-screen="route" aria-label="Routenplanung">
+          <div class="intro-row">
+            <div>
+              <p class="eyebrow">ROUTENPLANER</p>
+              <h1>Wohin möchtest du?</h1>
+            </div>
+            <span class="speed-chip"><span class="speed-dot"></span> <span id="speed-chip-value">45 km/h</span></span>
+          </div>
+
+          <form id="route-form" class="route-form">
+            <div class="route-inputs">
+              <div class="route-symbols" aria-hidden="true"><span class="start-symbol"></span><span class="route-dash"></span><span class="end-symbol"></span></div>
+              <div class="fields">
+                <div class="place-field" data-place="start">
+                  <label for="start-input">Start</label>
+                  <div class="input-line">
+                    <input id="start-input" name="start" autocomplete="off" placeholder="Ort oder Adresse suchen">
+                    <button class="search-place" type="button" data-search="start" aria-label="Start suchen">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4.3 4.3"/></svg>
+                    </button>
+                  </div>
+                  <div class="suggestions" id="start-suggestions" hidden></div>
+                </div>
+                <div class="field-divider"></div>
+                <div class="place-field" data-place="destination">
+                  <label for="destination-input">Ziel</label>
+                  <div class="input-line">
+                    <input id="destination-input" name="destination" autocomplete="off" placeholder="Wohin möchtest du fahren?">
+                    <button class="search-place" type="button" data-search="destination" aria-label="Ziel suchen">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4.3 4.3"/></svg>
+                    </button>
+                  </div>
+                  <div class="suggestions" id="destination-suggestions" hidden></div>
+                </div>
+              </div>
+            </div>
+            <div class="map-pick-row">
+              <span>Oder auf der Karte wählen</span>
+              <div class="pick-buttons">
+                <button type="button" class="pick-button active" data-pick="start">Start setzen</button>
+                <button type="button" class="pick-button" data-pick="destination">Ziel setzen</button>
+              </div>
+            </div>
+
+            <details class="options-card" aria-labelledby="options-title">
+              <summary class="options-heading">
+                <div class="options-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8m0-12.8L5.6 18.4"/><circle cx="12" cy="12" r="8.5"/></svg>
+                </div>
+                <div class="options-title-copy"><h2 id="options-title">Fahrzeug &amp; Straßen</h2><p id="options-summary-value">45 km/h · Autobahnen meiden</p></div>
+                <svg class="options-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </summary>
+              <div class="options-body">
+                <label class="speed-control" for="top-speed">
+                  <span>Höchstgeschwindigkeit</span>
+                  <span class="speed-input-wrap"><input id="top-speed" type="number" min="30" max="80" step="5" value="45" inputmode="numeric"><span>km/h</span></span>
+                </label>
+                <label class="toggle-row" for="avoid-highways">
+                  <span><strong>Autobahnen &amp; Schnellstraßen meiden</strong><small>Wenn eine Alternative verfügbar ist</small></span>
+                  <span class="switch"><input id="avoid-highways" type="checkbox" checked><span class="switch-track"></span></span>
+                </label>
+              </div>
+            </details>
+
+            <button class="route-button" id="route-button" type="submit">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5 8.7 5l6.6 14.5 4.7-14"/><circle cx="4" cy="19.5" r="1.4"/><circle cx="20" cy="5.5" r="1.4"/></svg>
+              Route berechnen
+            </button>
+            <button class="location-button" id="location-button" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22"/></svg>
+              Meinen Standort als Start verwenden
+            </button>
+          </form>
+
+          <div class="route-result" id="route-result" hidden></div>
+          <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+
+          <details class="limits">
+            <summary><span class="info-mark">i</span> Was die Route berücksichtigt</summary>
+            <p>Die Route nutzt OpenStreetMap-Straßendaten und Valhalla im Auto-Profil. Die gewählte Geschwindigkeit (30–80 km/h) und die Vermeidung von Autobahnen/Schnellstraßen beeinflussen die Streckenwahl. Das sind Präferenzen, keine Garantie oder rechtliche Freigabe: Maßgeblich sind Fahrzeugpapiere, örtliche Regeln und Beschilderung. Baustellen und kurzfristige Sperren werden nicht vollständig geprüft.</p>
+          </details>
+          <footer class="panel-footer">Kartendaten © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap-Mitwirkende</a></footer>
+          </section>
+
+          <section class="screen" id="screen-fuel" data-screen="fuel" aria-label="Tankbuch" hidden>
+            <div class="screen-heading"><p class="eyebrow">DEIN FAHRZEUG</p><h1>Tankbuch</h1><p>Füllungen, Kosten und Verbrauch im Blick.</p></div>
+            <div class="summary-grid">
+              <div class="summary-card"><span>Getankt gesamt</span><strong id="fuel-total-cost">0,00 €</strong></div>
+              <div class="summary-card"><span>Letzter Verbrauch</span><strong id="fuel-consumption">—</strong></div>
+            </div>
+            <form id="fuel-form" class="data-form">
+              <label>Datum<input id="fuel-date" name="date" type="date" required></label>
+              <label>Kilometerstand<input name="odometer" type="number" min="0" step="1" placeholder="z. B. 12.450" required></label>
+              <div class="form-pair"><label>Getankt (Liter)<input name="liters" type="number" min="0.1" step="0.1" placeholder="8,5" required></label><label>Gesamtpreis (€)<input name="total" type="number" min="0" step="0.01" placeholder="14,20" required></label></div>
+              <label class="check-row"><input name="full" type="checkbox"><span>Tank vollständig gefüllt</span></label>
+              <button class="primary-action" type="submit">Füllung speichern</button>
+            </form>
+            <div class="list-heading"><h2>Letzte Tankfüllungen</h2><span id="fuel-count">0 Einträge</span></div>
+            <div class="record-list" id="fuel-list"></div>
+          </section>
+
+          <section class="screen" id="screen-service" data-screen="service" aria-label="Service-Erinnerungen" hidden>
+            <div class="screen-heading"><p class="eyebrow">ALLES IM GRIFF</p><h1>Service &amp; Wartung</h1><p>Erinnere dich nach Datum oder Kilometerstand.</p></div>
+            <form id="odometer-form" class="odometer-card">
+              <label for="current-odometer">Aktueller Kilometerstand</label>
+              <div class="inline-form"><input id="current-odometer" type="number" min="0" step="1" placeholder="z. B. 12.450"><span>km</span><button type="submit" class="small-action">Speichern</button></div>
+            </form>
+            <form id="service-form" class="data-form">
+              <label>Woran soll ich dich erinnern?<input name="title" maxlength="70" placeholder="z. B. Ölwechsel" required></label>
+              <div class="form-pair"><label>Fällig am<input name="date" type="date"></label><label>Fällig bei km<input name="odometer" type="number" min="0" step="1" placeholder="optional"></label></div>
+              <p class="form-note">Mindestens Datum oder Kilometerstand eintragen.</p>
+              <button class="primary-action" type="submit">Erinnerung hinzufügen</button>
+            </form>
+            <div class="list-heading"><h2>Deine Erinnerungen</h2><span id="service-count">0 Einträge</span></div>
+            <div class="record-list" id="service-list"></div>
+          </section>
+
+          <section class="screen" id="screen-parking" data-screen="parking" aria-label="Parkplatz merken" hidden>
+            <div class="screen-heading"><p class="eyebrow">WIEDERFINDEN</p><h1>Parkplatz merken</h1><p>Speichere den Standort deines abgestellten Mopedautos.</p></div>
+            <div class="parking-card" id="parking-card"></div>
+            <label class="standalone-label" for="parking-note">Notiz zum Parkplatz</label>
+            <input class="standalone-input" id="parking-note" maxlength="70" placeholder="z. B. Ebene 2, Säule B">
+            <button class="primary-action" id="save-parking-location" type="button">Aktuellen Standort merken</button>
+            <button class="secondary-action" id="pick-parking-location" type="button">Parkplatz auf der Karte wählen</button>
+            <p class="helper-copy" id="parking-help">Dein Standort wird erst nach Klick auf „Aktuellen Standort merken“ abgefragt. Die Position bleibt auf diesem Gerät gespeichert.</p>
+          </section>
+
+          <section class="screen cockpit-screen" id="screen-cockpit" data-screen="cockpit" aria-label="GPS-Cockpit" hidden>
+            <div class="cockpit-top"><div><p class="eyebrow">FAHRBEREIT</p><h1>Cockpit</h1></div><span class="gps-status" id="gps-status">GPS aus</span></div>
+            <div class="speedometer" id="speedometer" aria-live="polite"><div class="speedometer-inner"><strong id="gps-speed">0</strong><span>km/h</span></div></div>
+            <div class="cockpit-stats"><div><span>Heute gefahren</span><strong id="daily-distance">0,0 <small>km</small></strong></div><div><span>GPS-Genauigkeit</span><strong id="gps-accuracy">—</strong></div></div>
+            <div class="cockpit-actions"><button class="primary-action" id="start-tracking" type="button">Fahrt starten</button><button class="secondary-action" id="stop-tracking" type="button" disabled>Fahrt beenden</button></div>
+            <p class="helper-copy" id="cockpit-help">Für Tacho und Tageskilometer Standortzugriff erlauben. Die Aufzeichnung läuft, solange diese Seite geöffnet ist.</p>
+          </section>
+        </div>
+      </aside>
+
+      <div class="map-hint" id="map-hint" aria-live="polite">Tippe auf die Karte, um den Start zu setzen</div>
+      <button class="locate-map" id="map-locate" type="button" aria-label="Karte auf meinen Standort zentrieren" title="Auf meinen Standort zentrieren">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22"/></svg>
+      </button>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="./config.js"></script>
+    <script src="./app.js?v=2" defer></script>
+  </body>
+</html>
