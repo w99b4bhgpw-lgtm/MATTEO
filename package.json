@@ -1,0 +1,14 @@
+{
+  "name": "mopedauto-routeplaner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mobilfreundlicher OpenStreetMap-Routenplaner für langsame Leichtfahrzeuge",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
